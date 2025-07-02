@@ -89,3 +89,12 @@ UpdateVars PK PK.auth
 
 And you should now be running in secure mode with your own keys.
 
+
+## Build
+
+```
+# Fedora
+sudo dnf install perl-File-Slurp help2man
+
+make
+```
