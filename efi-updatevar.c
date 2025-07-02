@@ -81,8 +81,8 @@ main(int argc, char *argv[])
 			exit(0);
 		} else if(strcmp(argv[1], "-o") == 0) {
 			output = argv[2];
-			argv += 1;
-			argc -= 1;
+			argv += 2;
+			argc -= 2;
 		} else if(strcmp(argv[1], "-a") == 0) {
 			attributes |= EFI_VARIABLE_APPEND_WRITE;
 			argv += 1;
