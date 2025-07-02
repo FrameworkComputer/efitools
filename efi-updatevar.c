@@ -150,7 +150,8 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 			
-	kernel_variable_init();
+	if (!output)
+		kernel_variable_init();
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_digests();
 	OpenSSL_add_all_ciphers();
