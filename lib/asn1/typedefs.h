@@ -52,7 +52,6 @@ typedef unsigned char u_char;
 
 #endif
 
-typedef unsigned char bool;
 typedef unsigned int u_int;
 
 #define DBG1(s...)
