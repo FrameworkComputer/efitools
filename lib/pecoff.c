@@ -116,10 +116,11 @@ pecoff_read_header(PE_COFF_LOADER_IMAGE_CONTEXT *context, void *data)
 	context->NumberOfSections = PEHdr->Pe32.FileHeader.NumberOfSections;
 	context->FirstSection = (EFI_IMAGE_SECTION_HEADER *)((char *)PEHdr + PEHdr->Pe32.FileHeader.SizeOfOptionalHeader + sizeof(UINT32) + sizeof(EFI_IMAGE_FILE_HEADER));
 
-	if (context->SecDir->VirtualAddress >= context->ImageSize) {
-		Print(L"Malformed security header\n");
-		return EFI_INVALID_PARAMETER;
-	}
+	// Ignore bad header, I only care about hashing, not about any signatures already present
+	//if (context->SecDir->VirtualAddress >= context->ImageSize) {
+	//	Print(L"Malformed security header\n");
+	//	return 31;
+	//}
 
 	return EFI_SUCCESS;
 }
