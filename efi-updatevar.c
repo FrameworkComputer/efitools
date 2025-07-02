@@ -61,7 +61,7 @@ main(int argc, char *argv[])
 	char *signedby[] = { "PK", "PK", "KEK", "KEK" };
 	EFI_GUID *owners[] = { &GV_GUID, &GV_GUID, &SIG_DB, &SIG_DB };
 	EFI_GUID *owner, guid = MOK_OWNER;
-	int i, esl_mode = 0, fd, ret, delsig = -1, delentry = -1;
+	int i, esl_mode = 0, fd, ret = 0, delsig = -1, delentry = -1;
 	struct stat st;
 	uint32_t attributes = EFI_VARIABLE_NON_VOLATILE
 		| EFI_VARIABLE_RUNTIME_ACCESS
