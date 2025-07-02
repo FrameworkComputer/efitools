@@ -94,7 +94,10 @@ And you should now be running in secure mode with your own keys.
 
 ```
 # Fedora
-sudo dnf install perl-File-Slurp help2man
+sudo dnf install gnu-efi-devel perl-File-Slurp help2man
+# Ubuntu
+sudo apt-get install -y gnu-efi libfile-slurp-perl help2man
+
 
 make
 ```
