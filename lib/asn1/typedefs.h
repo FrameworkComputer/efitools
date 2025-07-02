@@ -27,6 +27,7 @@ MEMCPY(void *dest, void *src, size_t n)
 
 #define memcpy MEMCPY
 
+#include <stdbool.h>
 typedef unsigned char u_char;
 
 #else
