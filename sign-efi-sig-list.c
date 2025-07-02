@@ -5,6 +5,7 @@
  */
 #include <stdint.h>
 #define __STDC_VERSION__ 199901L
+#define _XOPEN_SOURCE
 #include <efi.h>
 #ifdef CONFIG_arm
 /* FIXME:
