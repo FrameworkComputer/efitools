@@ -45,6 +45,7 @@ help(const char *progname)
 	       "Options:\n"
 	       "\t-a\tappend a value to the variable instead of replacing it\n"
 	       "\t-e\tuse EFI Signature List instead of signed update (only works in Setup Mode\n"
+	       "\t-o <authfile>\toutput signed ESL (.auth) instead of calling SetVariable()\n"
 	       "\t-b <binfile>\tAdd hash of <binfile> to the signature list\n"
 	       "\t-f <file>\tAdd or Replace the key file (.esl or .auth) to the <var>\n"
 	       "\t-c <file>\tAdd or Replace the x509 certificate to the <var> (with <guid> if provided)\n"
@@ -68,7 +69,7 @@ main(int argc, char *argv[])
 		| EFI_VARIABLE_BOOTSERVICE_ACCESS
 		| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
 	char *hash_mode = NULL, *file = NULL, *var, *progname = argv[0], *buf,
-		*name, *crt_file = NULL, *key_file = NULL;
+		*name, *crt_file = NULL, *key_file = NULL, *output = NULL;
 	
 
 	while (argc > 1 && argv[1][0] == '-') {
@@ -78,6 +79,10 @@ main(int argc, char *argv[])
 		} else if (strcmp("--help", argv[1]) == 0) {
 			help(progname);
 			exit(0);
+		} else if(strcmp(argv[1], "-o") == 0) {
+			output = argv[2];
+			argv += 1;
+			argc -= 1;
 		} else if(strcmp(argv[1], "-a") == 0) {
 			attributes |= EFI_VARIABLE_APPEND_WRITE;
 			argv += 1;
@@ -394,7 +399,11 @@ main(int argc, char *argv[])
 
 	if (esl_mode) {
 		ret = set_variable_esl(var, owner, attributes, st.st_size, buf);
-	} else {
+	} else if (output) {
+		int fdoutfile = open(output, O_CREAT|O_WRONLY|O_TRUNC, S_IWUSR|S_IRUSR);
+		write(fdoutfile, buf, st.st_size);
+		close(fdoutfile);
+  } else {
 		ret = set_variable(var, owner, attributes, st.st_size, buf);
 	}
 
