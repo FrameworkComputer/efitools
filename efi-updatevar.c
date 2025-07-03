@@ -50,6 +50,7 @@ help(const char *progname)
 	       "\t-f <file>\tAdd or Replace the key file (.esl or .auth) to the <var>\n"
 	       "\t-c <file>\tAdd or Replace the x509 certificate to the <var> (with <guid> if provided)\n"
 	       "\t-g <guid>\tOptional <guid> for the X509 Certificate\n"
+	       "\t-p <file>\tPEM certificate of -k option\n"
 	       "\t-k <key>\tSecret key file for authorising User Mode updates\n"
 	       "\t-d <list>[-<entry>]\tDelete the signature list <list> (or just a single <entry> within the list)\n"
 	       );
@@ -69,7 +70,7 @@ main(int argc, char *argv[])
 		| EFI_VARIABLE_BOOTSERVICE_ACCESS
 		| EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
 	char *hash_mode = NULL, *file = NULL, *var, *progname = argv[0], *buf,
-		*name, *crt_file = NULL, *key_file = NULL, *output = NULL;
+		*name, *crt_file = NULL, *key_file = NULL, *output = NULL, *key_crt_file = NULL;
 	
 
 	while (argc > 1 && argv[1][0] == '-') {
@@ -108,6 +109,10 @@ main(int argc, char *argv[])
 			argc -= 2;
 		} else if (strcmp(argv[1], "-c") == 0) {
 			crt_file = argv[2];
+			argv += 2;
+			argc -= 2;
+		} else if (strcmp(argv[1], "-p") == 0) {
+			key_crt_file = argv[2];
 			argv += 2;
 			argc -= 2;
 		} else if (strcmp(argv[1], "-k") == 0) {
@@ -150,7 +155,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 			
-	if (!output)
+  if (!output)
 		kernel_variable_init();
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_digests();
@@ -292,37 +297,50 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 
-		uint8_t *esl;
-		uint32_t esl_len;
-		int ret = get_variable_alloc(signedby[i], &GV_GUID, NULL,
-					     &esl_len, &esl);
-		if (ret != 0) {
-			fprintf(stderr, "Failed to get %s: ", signedby[i]);
-			perror("");
-			exit(1);
-		}
-		EFI_SIGNATURE_LIST  *CertList = (EFI_SIGNATURE_LIST *)esl;
-		int DataSize = esl_len, size;
-
 		X509 *X = NULL;
+		uint8_t *esl = NULL;
 
-		certlist_for_each_certentry(CertList, esl, size, DataSize) {
-			EFI_SIGNATURE_DATA  *Cert;
-			if (compare_guid(&CertList->SignatureType, &X509_GUID) != 0)
-				continue;
-
-			certentry_for_each_cert(Cert, CertList) {
-				const unsigned char *psig = (unsigned char *)Cert->SignatureData;
-				X = d2i_X509(NULL, &psig, CertList->SignatureSize);
-				if (X509_check_private_key(X, pkey))
-					goto out;
-				X = NULL;
+		if (output) {
+			BIO *kek_cert;
+			kek_cert = BIO_new_file(key_crt_file, "r");
+			X = PEM_read_bio_X509(kek_cert, NULL, NULL, NULL);
+			if (!X) {
+				fprintf(stderr, "Failed to load certificate from %s\n", crt_file);
+				ERR_print_errors_fp(stderr);
+				exit(1);
 			}
-		}
+			BIO_free_all(kek_cert);
+		} else {
+			uint32_t esl_len;
+			esl = malloc(esl_len);
+			int ret = get_variable_alloc(signedby[i], &GV_GUID, NULL,
+								&esl_len, &esl);
+			if (ret != 0) {
+				fprintf(stderr, "Failed to get %s: ", signedby[i]);
+				perror("");
+				exit(1);
+			}
+			EFI_SIGNATURE_LIST  *CertList = (EFI_SIGNATURE_LIST *)esl;
+			int DataSize = esl_len, size;
+
+			certlist_for_each_certentry(CertList, esl, size, DataSize) {
+				EFI_SIGNATURE_DATA  *Cert;
+				if (compare_guid(&CertList->SignatureType, &X509_GUID) != 0)
+					continue;
+
+				certentry_for_each_cert(Cert, CertList) {
+					const unsigned char *psig = (unsigned char *)Cert->SignatureData;
+					X = d2i_X509(NULL, &psig, CertList->SignatureSize);
+					if (X509_check_private_key(X, pkey))
+						goto out;
+					X = NULL;
+				}
+			}
 	out:
-		if (!X) {
-			fprintf(stderr, "No public key matching %s in %s\n", key_file, signedby[i]);
-			exit (1);
+			if (!X) {
+				fprintf(stderr, "No public key matching %s in %s\n", key_file, signedby[i]);
+				exit (1);
+			}
 		}
 
 		EFI_TIME timestamp;
@@ -391,7 +409,8 @@ main(int argc, char *argv[])
 		memcpy(newbuf + siglen, buf, st.st_size);
 
 		free(buf);
-		free(esl);
+		if (esl != NULL)
+			free(esl);
 		free(var_auth);
 		buf = newbuf;
 		st.st_size = siglen + st.st_size;
