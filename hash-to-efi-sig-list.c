@@ -32,7 +32,7 @@
 static void
 usage(const char *progname)
 {
-	printf("Usage: %s efi-binary [efi-binary ...] efi-signature-list\n", progname);
+	printf("Usage: %s efi-binary [-g <guid>] [efi-binary ...] efi-signature-list\n", progname);
 }
 
 static void
@@ -42,7 +42,7 @@ help(const char *progname)
 	printf("Produce an EFI Signature List file containing the sha256 hash of the\n"
 	       "passed in EFI binary\n"
 	       "\nOptions:\n"
-	       "none\n"
+	       "\t-g <guid>\tOptional <guid> as hash owner guid, default MOK owner GUID\n"
 	       );
 }
 
@@ -52,6 +52,7 @@ main(int argc, char *argv[])
 	void *efifile;
 	const char *progname = argv[0];
 	int i;
+	EFI_GUID guid = MOK_OWNER;
 
 	while (argc > 1) {
 		if (strcmp("--version", argv[1]) == 0) {
@@ -60,6 +61,13 @@ main(int argc, char *argv[])
 		} else if (strcmp("--help", argv[1]) == 0) {
 			help(progname);
 			exit(0);
+		} else if (strcmp(argv[1], "-g") == 0) {
+			if (str_to_guid(argv[2], &guid)) {
+				fprintf(stderr, "Invalid GUID %s\n", argv[2]);
+				exit(1);
+			}
+			argv += 2;
+			argc -= 2;
 		} else  {
 			break;
 		}
@@ -114,7 +122,7 @@ main(int argc, char *argv[])
 	l->SignatureSize = 16 +32; /* UEFI defined */
 	for (i = 0; i < hashes; i++) {
 		EFI_SIGNATURE_DATA *d = (void *)sig + sizeof(EFI_SIGNATURE_LIST) + l->SignatureSize * i;
-		d->SignatureOwner = MOK_OWNER;
+		d->SignatureOwner = guid;
 		memcpy(&d->SignatureData, hash[i], sizeof(hash[i]));
 	}
 
